@@ -40,7 +40,9 @@ taskkill /PID 12345 /F
 ## Notification and Recommendation Services
 
 Install the updated dependancies
+\`\`\`bash
 pip install fastapi uvicorn requests httpx asyncpg redis aio-pika apscheduler
+\`\`\`
 
 ### Notification Services
 
@@ -54,12 +56,12 @@ To start it:
 \`\`\`bash
 python notification_service.py
 \`\`\`
-Note: By default, notifications print to the console. To connect real email or SMS delivery, replace the send_notification() function in notification_service.py with your preferred delivery method (e.g. SMTP, Twilio).
+Note: By default, notifications print to the console. To connect real email or SMS delivery, replace the `send_notification()` function in `notification_service.py` with your preferred delivery method (e.g. SMTP, Twilio).
 
 
 ### Recommendation Service
 
-The Recommendation Service tracks each user's borrowing habits by genre and media type, and uses that history to suggest available items they haven't read yet. It runs on http://localhost:8004.
+The Recommendation Service tracks each user's borrowing habits by genre and media type, and uses that history to suggest available items they haven't read yet. It runs on `http://localhost:8004`.
 
 To start it:
 \`\`\`bash
@@ -67,14 +69,14 @@ python recommendation_service.py
 \`\`\`
 
 It exposes two endpoints, both accessible through the gateway:
-GET /recommend/{user_id}
+`GET /recommend/{user_id}`
 
 Returns a ranked list of available items personalized to the user's borrowing history. Items are scored based on how closely their genre and media type match the user's past borrows. Genre match is weighted more heavily than media type.
 \`\`\`bash
 GET http://localhost:8000/recommend/1
 \`\`\`
 
-You can optionally request more or fewer results using the top_n parameter (defaults to 5):
+You can optionally request more or fewer results using the `top_n` parameter (defaults to 5):
 
 \`\`\`bash
 GET http://localhost:8000/recommend/1?top_n=10
@@ -95,7 +97,7 @@ Example response:
 \`\`\`
 
 Note: If a user has no borrowing history yet, the service falls back to their PostgreSQL borrow history to build an initial profile. Recommendations improve over time as the user borrows more items.
-GET /analytics/{user_id}
+`GET /analytics/{user_id}`
 
 Returns a breakdown of the user's borrowing history by genre and media type, with counts and percentages.
 \`\`\`bash
