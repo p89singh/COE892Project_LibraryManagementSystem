@@ -1,45 +1,53 @@
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import httpx
 import uvicorn
 
 app = FastAPI(title="Recommendation Service")
 
-# Dummy catalog (should match your catalog service IDs)
-catalog = {
-    101: "Database System Concepts",
-    102: "RabbitMQ in Action",
-    103: "Distributed Systems",
-    104: "Operating Systems",
-    105: "Computer Networks"
-}
+CATALOG_URL = "http://localhost:8001/items"
+borrow_history = {}
 
-# Simple recommendation logic (hardcoded relationships)
-recommendations_map = {
-    101: [103, 104],
-    102: [103],
-    103: [101, 105],
-    104: [101],
-    105: [103]
-}
+
+class BorrowEvent(BaseModel):
+    user_id: int
+    item_id: int
+
+
+@app.post("/record-borrow")
+async def record_borrow(event: BorrowEvent):
+    history = borrow_history.setdefault(event.user_id, [])
+    history.append(event.item_id)
+    return {"status": "recorded"}
 
 
 @app.get("/recommend/{user_id}")
-async def recommend(user_id: int, borrowed_items: list[int] = []):
-    if not borrowed_items:
-        return {
-            "user_id": user_id,
-            "recommendations": list(catalog.keys())[:3]  # default suggestions
-        }
+async def recommend(user_id: int):
+    async with httpx.AsyncClient() as client:
+        response = await client.get(CATALOG_URL, timeout=5.0)
 
-    recommended = set()
+    if response.status_code != 200:
+        raise HTTPException(status_code=502, detail="Catalog service unavailable.")
 
-    for item in borrowed_items:
-        if item in recommendations_map:
-            recommended.update(recommendations_map[item])
+    items = response.json()
+    borrowed_ids = set(borrow_history.get(user_id, []))
 
-    return {
-        "user_id": user_id,
-        "recommendations": list(recommended)
-    }
+    borrowed_genres = set()
+    for item in items:
+        if item["id"] in borrowed_ids:
+            borrowed_genres.add(item.get("genre"))
+
+    recommendations = []
+    for item in items:
+        if item["id"] in borrowed_ids:
+            continue
+        if borrowed_genres and item.get("genre") in borrowed_genres:
+            recommendations.append(item)
+
+    if not recommendations:
+        recommendations = [item for item in items if item["id"] not in borrowed_ids][:5]
+
+    return recommendations[:5]
 
 
 if __name__ == "__main__":

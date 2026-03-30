@@ -1,104 +1,127 @@
 import requests
-import sys
 
-# Point this to your FastAPI Gateway address
-GATEWAY_URL = "http://localhost:8000"
+BASE_URL = "http://127.0.0.1:8000"
 
-def print_header(title):
-    print(f"\n{'-'*40}")
-    print(f"{title.center(40)}")
-    print(f"{'-'*40}")
 
-def search_catalog():
-    print_header("Search Catalog & View Availability")
-    query = input("Enter book title, author, or keyword: ")
-    
-    try:
-        # Route through the API Gateway
-        response = requests.get(f"{GATEWAY_URL}/search", params={"q": query})
-        
-        if response.status_code == 200:
-            results = response.json()
-            if not results:
-                print("No items found matching your query.")
-                return
-            
-            print("\n--- Search Results ---")
-            for item in results:
-                status = "Available" if item.get('available') else "Checked Out"
-                print(f"ID: {item.get('id')} | Title: {item.get('title')} | Status: {status}")
-        else:
-            print(f"System Error: {response.status_code} - {response.text}")
-            
-    except requests.exceptions.RequestException:
-        print("[!] Error: Could not connect to the API Gateway. Is it running?")
+def search_items():
+    q = input("Enter search term: ").strip()
+    response = requests.get(f"{BASE_URL}/search", params={"q": q})
+    print("\nSearch Results:")
+    if response.status_code == 200:
+        items = response.json()
+        for item in items:
+            print(
+                f"ID: {item['id']} | "
+                f"{item['title']} by {item['author']} | "
+                f"Genre: {item['genre']} | "
+                f"Type: {item['media_type']} | "
+                f"Availability: {item['availability']}"
+            )
+    else:
+        print("Error:", response.text)
+    print()
 
-def borrow_item():
-    print_header("Borrow / Reserve Item")
-    user_id = input("Enter your User ID: ")
-    item_id = input("Enter the Item ID you wish to borrow: ")
-    
-    if not user_id.isdigit() or not item_id.isdigit():
-        print("[!] Invalid input. IDs must be numeric.")
-        return
-
-    try:
-        # Route through the API Gateway to the Circulation Engine
-        response = requests.post(
-            f"{GATEWAY_URL}/borrow", 
-            params={"user_id": int(user_id), "item_id": int(item_id)}
-        )
-        
-        # Clear system feedback based on response
-        if response.status_code == 200:
-            print(f"[SUCCESS] Item {item_id} successfully borrowed by User {user_id}!")
-            print("A notification has been triggered in the background.")
-        elif response.status_code == 409:
-            print(f"[!] Conflict: Item {item_id} is already checked out or unavailable.")
-        else:
-            print(f"[!] Failed to borrow item. Error: {response.json().get('detail')}")
-            
-    except requests.exceptions.RequestException:
-        print("[!] Error: Could not connect to the API Gateway.")
 
 def view_profile():
-    print_header("View User Profile")
-    user_id = input("Enter your User ID: ")
-    
-    try:
-        response = requests.get(f"{GATEWAY_URL}/profile/{user_id}")
-        if response.status_code == 200:
-            data = response.json()
-            print(f"Name: {data.get('name')}")
-            print(f"Active Borrows: {len(data.get('borrowed_items', []))}")
-        else:
-            print(f"[!] Error: {response.json().get('detail')}")
-    except requests.exceptions.RequestException:
-        print("[!] Error: Could not connect to the API Gateway.")
+    user_id = input("Enter user ID: ").strip()
+    response = requests.get(f"{BASE_URL}/profile/{user_id}")
+    print("\nProfile:")
+    if response.status_code == 200:
+        profile = response.json()
+        print(f"ID: {profile['id']}")
+        print(f"Name: {profile['full_name']}")
+        print(f"Email: {profile['email']}")
+        print(f"Status: {profile['account_status']}")
+        print(f"Max Loans: {profile['max_loans']}")
+    else:
+        print("Error:", response.text)
+    print()
 
-def main_menu():
+
+def borrow_item():
+    user_id = int(input("Enter user ID: ").strip())
+    item_id = int(input("Enter item ID to borrow: ").strip())
+    response = requests.post(
+        f"{BASE_URL}/borrow",
+        json={"user_id": user_id, "item_id": item_id}
+    )
+    print("\nBorrow Result:")
+    print(response.text)
+    print()
+
+
+def return_item():
+    user_id = int(input("Enter user ID: ").strip())
+    item_id = int(input("Enter item ID to return: ").strip())
+    response = requests.post(
+        f"{BASE_URL}/return",
+        json={"user_id": user_id, "item_id": item_id}
+    )
+    print("\nReturn Result:")
+    print(response.text)
+    print()
+
+
+def reserve_item():
+    user_id = int(input("Enter user ID: ").strip())
+    item_id = int(input("Enter item ID to reserve: ").strip())
+    response = requests.post(
+        f"{BASE_URL}/reserve",
+        json={"user_id": user_id, "item_id": item_id}
+    )
+    print("\nReservation Result:")
+    print(response.text)
+    print()
+
+
+def recommendations():
+    user_id = input("Enter user ID: ").strip()
+    response = requests.get(f"{BASE_URL}/recommend/{user_id}")
+    print("\nRecommendations:")
+    if response.status_code == 200:
+        items = response.json()
+        for item in items:
+            print(
+                f"ID: {item['id']} | "
+                f"{item['title']} by {item['author']} | "
+                f"Genre: {item['genre']}"
+            )
+    else:
+        print("Error:", response.text)
+    print()
+
+
+def main():
     while True:
-        print_header("Automated Public Library System")
-        print("1. Search Catalog & View Availability")
-        print("2. Borrow an Item")
-        print("3. View User Profile")
-        print("4. Exit")
-        
-        choice = input("\nSelect an option (1-4): ")
-        
-        if choice == '1':
-            search_catalog()
-        elif choice == '2':
-            borrow_item()
-        elif choice == '3':
+        print("=== Library Management System ===")
+        print("1. Search Catalog")
+        print("2. View User Profile")
+        print("3. Borrow Item")
+        print("4. Return Item")
+        print("5. Reserve Item")
+        print("6. View Recommendations")
+        print("7. Exit")
+
+        choice = input("Choose an option: ").strip()
+
+        if choice == "1":
+            search_items()
+        elif choice == "2":
             view_profile()
-        elif choice == '4':
-            print("Exiting system. Goodbye!")
-            sys.exit(0)
+        elif choice == "3":
+            borrow_item()
+        elif choice == "4":
+            return_item()
+        elif choice == "5":
+            reserve_item()
+        elif choice == "6":
+            recommendations()
+        elif choice == "7":
+            print("Goodbye.")
+            break
         else:
-            print("[!] Invalid selection. Please choose 1-4.")
+            print("Invalid choice.\n")
+
 
 if __name__ == "__main__":
-    # Ensure dependencies are noted for the README
-    # pip install requests
-    main_menu()
+    main()

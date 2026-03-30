@@ -4,7 +4,6 @@ import uvicorn
 import asyncio
 
 app = FastAPI(title="Notification Service")
-
 notification_queue = None
 
 
@@ -29,10 +28,7 @@ async def send_notification(request: NotificationRequest):
 async def process_notifications():
     while True:
         notification = await notification_queue.get()
-
-        # Simulate sending (email/SMS/etc)
         print(f"[NOTIFICATION] User {notification.user_id}: {notification.message}")
-
         await asyncio.sleep(0.1)
         notification_queue.task_done()
 
