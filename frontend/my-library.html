@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Library</title>
+  <link rel="stylesheet" href="/frontend/css/styles.css" />
+</head>
+<body>
+  <div class="wide-page">
+    <div class="topbar">
+      <div>
+        <h1>My Library</h1>
+        <p id="libraryUserBanner" class="subtitle"></p>
+      </div>
+      <div class="button-row">
+        <a class="btn btn-secondary" href="/catalog">Catalog</a>
+        <a class="btn btn-secondary" href="/recommendations-page">Recommendations</a>
+        <button class="btn" onclick="logoutUser()">Logout</button>
+      </div>
+    </div>
+
+    <div class="two-column">
+      <div>
+        <h2>Loans</h2>
+        <div id="loansContainer"></div>
+      </div>
+      <div>
+        <h2>Reservations</h2>
+        <div id="reservationsContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/frontend/js/api.js"></script>
+  <script src="/frontend/js/auth.js"></script>
+  <script src="/frontend/js/circulation.js"></script>
+  <script src="/frontend/js/library.js"></script>
+</body>
+</html>

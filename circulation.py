@@ -6,11 +6,11 @@ import uvicorn
 
 app = FastAPI(title="Circulation Service")
 
-DB_DSN = "postgresql://postgres:postgres@localhost/circulation_db"
+DB_DSN = "postgresql://postgres:postgres@postgres:5432/circulation_db"
 db_pool = None
 
-NOTIFICATION_URL = "http://localhost:8005/notify"
-RECOMMENDATION_URL = "http://localhost:8004/record-borrow"
+NOTIFICATION_URL = "http://notification-service:8005/notify"
+RECOMMENDATION_URL = "http://recommendation-service:8004/record-borrow"
 
 
 class BorrowRequest(BaseModel):
@@ -28,15 +28,21 @@ class ReserveRequest(BaseModel):
     item_id: int
 
 
+class RenewRequest(BaseModel):
+    user_id: int
+    item_id: int
+
+
 @app.on_event("startup")
-async def startup():
+async def startup() -> None:
     global db_pool
     db_pool = await asyncpg.create_pool(dsn=DB_DSN)
 
 
 @app.on_event("shutdown")
-async def shutdown():
-    await db_pool.close()
+async def shutdown() -> None:
+    if db_pool:
+        await db_pool.close()
 
 
 @app.get("/availability/{item_id}")
@@ -50,9 +56,11 @@ async def get_availability(item_id: int):
             """,
             item_id,
         )
-        if not row:
-            raise HTTPException(status_code=404, detail="Item not found in circulation.")
-        return dict(row)
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Item not found in circulation.")
+
+    return dict(row)
 
 
 @app.post("/borrow")
@@ -297,6 +305,111 @@ async def reserve_item(request: ReserveRequest):
         "message": f"Reservation created for item {request.item_id} by user {request.user_id}",
         "queue_position": queue_position,
     }
+
+
+@app.post("/renew")
+async def renew_item(request: RenewRequest):
+    async with db_pool.acquire() as conn:
+        async with conn.transaction():
+            state_row = await conn.fetchrow(
+                """
+                SELECT item_id, state, checked_out_by
+                FROM item_state
+                WHERE item_id = $1
+                FOR UPDATE
+                """,
+                request.item_id,
+            )
+
+            if not state_row:
+                raise HTTPException(status_code=404, detail="Item not found.")
+
+            if state_row["state"] != "CHECKED_OUT":
+                raise HTTPException(status_code=409, detail="Item is not currently checked out.")
+
+            if state_row["checked_out_by"] != request.user_id:
+                raise HTTPException(status_code=403, detail="This user did not borrow the item.")
+
+            active_reservation = await conn.fetchrow(
+                """
+                SELECT id
+                FROM reservations
+                WHERE item_id = $1
+                  AND status = 'ACTIVE'
+                LIMIT 1
+                """,
+                request.item_id,
+            )
+
+            if active_reservation:
+                raise HTTPException(status_code=409, detail="Item has an active reservation and cannot be renewed.")
+
+            result = await conn.execute(
+                """
+                UPDATE loans
+                SET due_date = due_date + INTERVAL '14 days'
+                WHERE item_id = $1
+                  AND user_id = $2
+                  AND status = 'ACTIVE'
+                """,
+                request.item_id,
+                request.user_id,
+            )
+
+            if result.endswith("0"):
+                raise HTTPException(status_code=404, detail="Active loan not found.")
+
+            updated_loan = await conn.fetchrow(
+                """
+                SELECT id, user_id, item_id, borrowed_at, due_date, returned_at, status
+                FROM loans
+                WHERE item_id = $1
+                  AND user_id = $2
+                  AND status = 'ACTIVE'
+                ORDER BY borrowed_at DESC
+                LIMIT 1
+                """,
+                request.item_id,
+                request.user_id,
+            )
+
+    return {
+        "status": "success",
+        "message": f"Item {request.item_id} successfully renewed for user {request.user_id}",
+        "loan": dict(updated_loan),
+    }
+
+
+@app.get("/loans/{user_id}")
+async def get_loans(user_id: int):
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT id, user_id, item_id, borrowed_at, due_date, returned_at, status
+            FROM loans
+            WHERE user_id = $1
+            ORDER BY borrowed_at DESC
+            """,
+            user_id,
+        )
+
+    return [dict(row) for row in rows]
+
+
+@app.get("/reservations/{user_id}")
+async def get_reservations(user_id: int):
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT id, user_id, item_id, reserved_at, queue_position, status
+            FROM reservations
+            WHERE user_id = $1
+            ORDER BY reserved_at DESC
+            """,
+            user_id,
+        )
+
+    return [dict(row) for row in rows]
 
 
 if __name__ == "__main__":

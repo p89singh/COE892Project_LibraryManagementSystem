@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Catalog</title>
+  <link rel="stylesheet" href="/frontend/css/styles.css" />
+</head>
+<body>
+  <div class="wide-page">
+    <div class="topbar">
+      <div>
+        <h1>Catalog</h1>
+        <p id="userBanner" class="subtitle"></p>
+      </div>
+      <div class="button-row">
+        <a class="btn btn-secondary" href="/">Home</a>
+        <a class="btn btn-secondary" href="/my-library">My Library</a>
+        <a class="btn btn-secondary" href="/recommendations-page">Recommendations</a>
+        <a class="btn btn-secondary" href="/admin">Admin</a>
+        <button class="btn" onclick="logoutUser()">Logout</button>
+      </div>
+    </div>
+
+    <div class="card search-card">
+      <label for="searchInput">Search by title, author, or genre</label>
+      <div class="search-row">
+        <input id="searchInput" type="text" placeholder="Search books..." />
+        <button class="btn" onclick="searchBooks()">Search</button>
+        <button class="btn btn-secondary" onclick="loadBooks()">Reset</button>
+      </div>
+    </div>
+
+    <div id="booksContainer" class="catalog-grid"></div>
+  </div>
+
+  <script src="/frontend/js/api.js"></script>
+  <script src="/frontend/js/auth.js"></script>
+  <script src="/frontend/js/circulation.js"></script>
+  <script src="/frontend/js/catalog.js"></script>
+</body>
+</html>

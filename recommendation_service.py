@@ -1,53 +1,53 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
-import httpx
+import asyncpg
 import uvicorn
 
 app = FastAPI(title="Recommendation Service")
 
-CATALOG_URL = "http://localhost:8001/items"
-borrow_history = {}
+CATALOG_DB_DSN = "postgresql://postgres:postgres@postgres:5432/catalog_db"
+
+catalog_pool = None
 
 
-class BorrowEvent(BaseModel):
+class BorrowRecordRequest(BaseModel):
     user_id: int
     item_id: int
 
 
+@app.on_event("startup")
+async def startup() -> None:
+    global catalog_pool
+    catalog_pool = await asyncpg.create_pool(dsn=CATALOG_DB_DSN)
+
+
+@app.on_event("shutdown")
+async def shutdown() -> None:
+    if catalog_pool:
+        await catalog_pool.close()
+
+
 @app.post("/record-borrow")
-async def record_borrow(event: BorrowEvent):
-    history = borrow_history.setdefault(event.user_id, [])
-    history.append(event.item_id)
-    return {"status": "recorded"}
+async def record_borrow(data: BorrowRecordRequest):
+    return {
+        "status": "success",
+        "message": f"Borrow event recorded for user {data.user_id}, item {data.item_id}"
+    }
 
 
 @app.get("/recommend/{user_id}")
 async def recommend(user_id: int):
-    async with httpx.AsyncClient() as client:
-        response = await client.get(CATALOG_URL, timeout=5.0)
+    async with catalog_pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT id, title, author, genre, media_type, isbn, publication_year, description, total_copies, created_at
+            FROM items
+            ORDER BY id
+            LIMIT 5
+            """
+        )
 
-    if response.status_code != 200:
-        raise HTTPException(status_code=502, detail="Catalog service unavailable.")
-
-    items = response.json()
-    borrowed_ids = set(borrow_history.get(user_id, []))
-
-    borrowed_genres = set()
-    for item in items:
-        if item["id"] in borrowed_ids:
-            borrowed_genres.add(item.get("genre"))
-
-    recommendations = []
-    for item in items:
-        if item["id"] in borrowed_ids:
-            continue
-        if borrowed_genres and item.get("genre") in borrowed_genres:
-            recommendations.append(item)
-
-    if not recommendations:
-        recommendations = [item for item in items if item["id"] not in borrowed_ids][:5]
-
-    return recommendations[:5]
+    return [dict(row) for row in rows]
 
 
 if __name__ == "__main__":

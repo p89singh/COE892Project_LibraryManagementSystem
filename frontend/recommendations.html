@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recommendations</title>
+  <link rel="stylesheet" href="/frontend/css/styles.css" />
+</head>
+<body>
+  <div class="wide-page">
+    <div class="topbar">
+      <div>
+        <h1>Recommendations</h1>
+        <p id="recommendationBanner" class="subtitle"></p>
+      </div>
+      <div class="button-row">
+        <a class="btn btn-secondary" href="/catalog">Catalog</a>
+        <a class="btn btn-secondary" href="/my-library">My Library</a>
+        <button class="btn" onclick="logoutUser()">Logout</button>
+      </div>
+    </div>
+
+    <div id="recommendationsContainer" class="catalog-grid"></div>
+  </div>
+
+  <script src="/frontend/js/api.js"></script>
+  <script src="/frontend/js/auth.js"></script>
+  <script src="/frontend/js/recommendations.js"></script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin</title>
+  <link rel="stylesheet" href="/frontend/css/styles.css" />
+</head>
+<body>
+  <div class="wide-page">
+    <div class="topbar">
+      <div>
+        <h1>Admin Panel</h1>
+        <p class="subtitle">Manage catalog items</p>
+      </div>
+      <div class="button-row">
+        <a class="btn btn-secondary" href="/catalog">Catalog</a>
+        <a class="btn btn-secondary" href="/my-library">My Library</a>
+        <button class="btn" onclick="logoutUser()">Logout</button>
+      </div>
+    </div>
+
+    <div class="two-column">
+      <div class="card">
+        <h2>Add Item</h2>
+
+        <label>Title</label>
+        <input id="add_title" type="text" />
+
+        <label>Author</label>
+        <input id="add_author" type="text" />
+
+        <label>Genre</label>
+        <input id="add_genre" type="text" />
+
+        <label>Media Type</label>
+        <input id="add_media_type" type="text" value="Book" />
+
+        <label>ISBN</label>
+        <input id="add_isbn" type="text" />
+
+        <label>Publication Year</label>
+        <input id="add_publication_year" type="number" />
+
+        <label>Description</label>
+        <textarea id="add_description"></textarea>
+
+        <label>Total Copies</label>
+        <input id="add_total_copies" type="number" value="1" />
+
+        <button class="btn full-width" onclick="createItem()">Add Item</button>
+        <p id="adminAddMessage" class="message"></p>
+      </div>
+
+      <div class="card">
+        <h2>Update / Delete Item</h2>
+
+        <label>Item ID</label>
+        <input id="edit_id" type="number" />
+
+        <label>Title</label>
+        <input id="edit_title" type="text" />
+
+        <label>Author</label>
+        <input id="edit_author" type="text" />
+
+        <label>Genre</label>
+        <input id="edit_genre" type="text" />
+
+        <label>Media Type</label>
+        <input id="edit_media_type" type="text" value="Book" />
+
+        <label>ISBN</label>
+        <input id="edit_isbn" type="text" />
+
+        <label>Publication Year</label>
+        <input id="edit_publication_year" type="number" />
+
+        <label>Description</label>
+        <textarea id="edit_description"></textarea>
+
+        <label>Total Copies</label>
+        <input id="edit_total_copies" type="number" value="1" />
+
+        <div class="button-row left-row">
+          <button class="btn btn-secondary" onclick="loadItemForEdit()">Load Item</button>
+          <button class="btn" onclick="updateItem()">Update Item</button>
+          <button class="btn danger-btn" onclick="deleteItem()">Delete Item</button>
+        </div>
+
+        <p id="adminEditMessage" class="message"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/frontend/js/api.js"></script>
+  <script src="/frontend/js/auth.js"></script>
+  <script src="/frontend/js/admin.js"></script>
+</body>
+</html>

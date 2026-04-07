@@ -1,0 +1,92 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: library_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+
+  redis:
+    image: redis:7
+    container_name: library_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: library_rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  catalog-service:
+    build: .
+    container_name: catalog_service
+    command: sh -c "sleep 10 && uvicorn catalog_service:app --host 0.0.0.0 --port 8001"
+    depends_on:
+      - postgres
+    ports:
+      - "8001:8001"
+
+  user-service:
+    build: .
+    container_name: user_service
+    command: sh -c "sleep 10 && uvicorn user_service:app --host 0.0.0.0 --port 8002"
+    depends_on:
+      - postgres
+    ports:
+      - "8002:8002"
+
+  circulation-service:
+    build: .
+    container_name: circulation_service
+    command: sh -c "sleep 10 && uvicorn circulation:app --host 0.0.0.0 --port 8003"
+    depends_on:
+      - postgres
+      - rabbitmq
+    ports:
+      - "8003:8003"
+
+  recommendation-service:
+    build: .
+    container_name: recommendation_service
+    command: sh -c "sleep 10 && uvicorn recommendation_service:app --host 0.0.0.0 --port 8004"
+    depends_on:
+      - catalog-service
+      - rabbitmq
+    ports:
+      - "8004:8004"
+
+  notification-service:
+    build: .
+    container_name: notification_service
+    command: sh -c "sleep 10 && uvicorn notification_service:app --host 0.0.0.0 --port 8005"
+    depends_on:
+      - rabbitmq
+    ports:
+      - "8005:8005"
+
+  gateway:
+    build: .
+    container_name: gateway_service
+    command: sh -c "sleep 15 && uvicorn gateway:app --host 0.0.0.0 --port 8000"
+    depends_on:
+      - catalog-service
+      - user-service
+      - circulation-service
+      - recommendation-service
+      - notification-service
+    ports:
+      - "8000:8000"
+
+volumes:
+  postgres_data:
